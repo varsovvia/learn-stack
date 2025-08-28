@@ -5,18 +5,29 @@ Un stack completo para desarrollo y producción usando Docker Compose, Caddy com
 ## 🏗️ Arquitectura
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Caddy Edge   │    │   Next.js Web   │    │   FastAPI API   │
-│   (Reverse     │    │   (Frontend)     │    │   (Backend)     │
-│    Proxy)      │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
                     ┌─────────────────┐
-                    │   FastAPI ML    │
-                    │   (ML Service)  │
-                    └─────────────────┘
+                    │   Caddy Edge    │
+                    │ (Reverse Proxy) │
+                    │   Ports 80/443  │
+                    └─────────┬───────┘
+                              │
+                    ┌─────────▼───────┐
+                    │   Load Balancer │
+                    │   & Routing     │
+                    └─────────┬───────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼──────┐    ┌────────▼────────┐    ┌──────▼──────┐
+│  Next.js Web │    │  FastAPI API    │    │ FastAPI ML  │
+│  Port 3000   │    │   Port 8000     │    │ Port 9000   │
+│ (Frontend)   │    │  (Backend)      │    │(ML Service) │
+└──────────────┘    └─────────────────┘    └─────────────┘
+
+Rutas:
+├── /          → Next.js Web
+├── /api/*     → FastAPI API  
+└── /ml/*      → FastAPI ML
 ```
 
 ## 🚀 Servicios
@@ -59,7 +70,7 @@ PROD_DOMAIN=example.com
 # Puertos de servicios
 WEB_PORT=3000
 API_PORT=8000
-ML_PORT=8001
+ML_PORT=9000
 
 # Límites de recursos (producción)
 WEB_CPU=0.5
@@ -108,16 +119,21 @@ docker compose -f compose.yml -f compose.prod.yml up -d --build
 
 ## 🌐 Enrutamiento
 
+### Cómo Funciona
+1. **Caddy** recibe todas las peticiones en puertos 80/443
+2. **Analiza la ruta** y redirige al servicio correspondiente
+3. **Elimina el prefijo** de la ruta antes de enviar al servicio
+
 ### Desarrollo
-- **URL**: `http://localhost` o `https://MI_IP.sslip.io`
+- **URL**: `http://localhost` o `http://TU_IP.sslip.io`
 - **Rutas**:
-  - `/` → Next.js Web
-  - `/api/*` → FastAPI API
-  - `/ml/*` → ML Service
+  - `/` → Next.js Web (puerto 3000)
+  - `/api/*` → FastAPI API (puerto 8000) - elimina `/api`
+  - `/ml/*` → FastAPI ML (puerto 9000) - elimina `/ml`
 
 ### Producción
 - **URL**: `https://tu-dominio.com`
-- **Rutas**: Igual que desarrollo pero con TLS
+- **Rutas**: Igual que desarrollo pero con TLS automático
 
 ## 🔧 Mejoras Implementadas
 
@@ -126,6 +142,11 @@ docker compose -f compose.yml -f compose.prod.yml up -d --build
 - ✅ Múltiples workers para FastAPI
 - ✅ Restart policies
 - ✅ Replicas para escalabilidad
+
+### Redes Docker
+- ✅ **`edge`**: Red externa para Caddy (puertos 80/443)
+- ✅ **`appnet`**: Red interna para servicios (web, api, ml)
+- ✅ **Aislamiento**: Servicios no expuestos directamente a internet
 
 ## 🚧 Próximos Pasos
 
