@@ -1,0 +1,24 @@
+# Development Caddyfile - HTTP only for local development
+{
+	# No email needed for development
+}
+
+# Development server on HTTP
+:80 {
+	@api path /api*
+	handle @api {
+		uri strip_prefix /api
+		reverse_proxy api:{env.API_PORT}
+	}
+
+	@ml path /ml*
+	handle @ml {
+		uri strip_prefix /ml
+		reverse_proxy ml:{env.ML_PORT}
+	}
+
+	# Root → Next.js
+	handle {
+		reverse_proxy web:{env.WEB_PORT}
+	}
+}

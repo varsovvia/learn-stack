@@ -1,0 +1,28 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Redirección HTTP → HTTPS
+http://{$PROD_DOMAIN} {
+	redir https://{$PROD_DOMAIN}{uri} 301
+}
+
+# Sitio principal en HTTPS
+https://{$PROD_DOMAIN} {
+	encode zstd gzip
+
+	@api path /api*
+	handle @api {
+		reverse_proxy api:${API_PORT}
+	}
+
+	@ml path /ml*
+	handle @ml {
+		reverse_proxy ml:${ML_PORT}
+	}
+
+	# Raíz → Next.js
+	handle {
+		reverse_proxy web:${WEB_PORT}
+	}
+}

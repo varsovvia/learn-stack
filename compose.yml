@@ -1,0 +1,52 @@
+name: learn-stack
+
+services:
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    volumes:
+      - ./caddy:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - ACME_AGREE=true
+      - EMAIL=${ACME_EMAIL}
+      - WEB_PORT=${WEB_PORT}
+      - API_PORT=${API_PORT}
+      - ML_PORT=${ML_PORT}
+    networks:
+      - edge
+      - appnet
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      - NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED}
+      - PORT=${WEB_PORT}
+    expose: ["${WEB_PORT}"]
+    networks: [appnet]
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      - PORT=${API_PORT}
+    expose: ["${API_PORT}"]
+    networks: [appnet]
+  
+  ml:
+    build:
+      context: ./apps/ml
+    environment:
+      - PORT=${ML_PORT}
+    expose: ["${ML_PORT}"]
+    networks: [appnet]
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    driver: bridge
+  appnet:
+    driver: bridge

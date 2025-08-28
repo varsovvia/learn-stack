@@ -1,0 +1,42 @@
+services:
+  caddy:
+    ports:
+      - "80:80"
+      - "443:443"
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile.prod", "--adapter", "caddyfile"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+
+  web:
+    command: ["npm", "run", "start"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "${WEB_CPU:-0.5}"
+          memory: "${WEB_MEM:-512M}"
+      replicas: 2
+
+  api:
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${API_PORT}", "--workers", "4"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPU:-0.5}"
+          memory: "${API_MEM:-512M}"
+      replicas: 2
+
+  ml:
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${ML_PORT}", "--workers", "2"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "${ML_CPU:-1.0}"
+          memory: "${ML_MEM:-1G}"
+      replicas: 1
